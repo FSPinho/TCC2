@@ -1,0 +1,131 @@
+\section{PROCEDIMENTOS METODOLÓGICOS}
+
+As etapas seguidas na realização deste trabalho estão listados abaixo.
+
+\subsection{Revisão Bibliográfica}
+
+Antes de mais nada, foram realizadas pesquisas em trabalhos já existentes com foco na compreensão do funcionamento geral dos sistemas de monitoramento aéreo, bem como o conhecimento das novas tecnologias utilizadas. A tecnologia ADS-B recebeu um atenção especial por ser um componente fundamental do sistema Radar Livre. Em seguida, foram analizados trabalhos direcionados à previsão e tratamento de colisão, alguns abordando o sistema TCAS, e outros trazendo algoritmos de previsão de colisão mais modernos. Entre estes, o algoritmo apresentado no trabalho de \citeonline{Gariel2011} foi selecionado como o mais adequado a compor o módulo CAPLAN. As principais ferramentas de pesquisa foram o Google Acadêmico\footnote{Disponível em scholar.google.com.br} e o site da IEEE\footnote{Disponível em www.ieee.org}. As palavras-chave utilizadas na pesquisa são: monitoramento aéreo, detecção de colisão de aeronaves no espaço aéreo, TCAS e tecnologia ADS-B.
+
+\subsection{Levantamento de Requisitos Para o Módulo CAPLAN}
+
+Após as pesquisas iniciais, foi realizado um levantamento de requisitos para o desenvolvimento do módulo de previsão de colisões CAPLAN, no qual foram listadas as funcionalidades exigidas ao módulo, suas restrições de desempenho e precisão, e os recursos já disponíveis no sistema Radar Livre que darão suporte a previsão de colisão. Os requisitos do módulo são os seguintes:
+
+\begin{itemize}
+
+\item O módulo deve ser capaz de prever a iminência de conflito entre duas aeronaves dadas suas posições globais (latitude, longitude e altitude) e velocidade (velocidade norte-sul, velocidade leste-oeste e velocidade vertical).
+
+\item O módulo deve detectar dois tipos de conflitos: o primeiro tipo indica que as aeronaves apresentam uma distância crítica entre si e que o risco e colisão pode surgir a qualquer momento; o segundo tipo indica uma iminência real de colisão para os próximos segundos.
+
+\item Para cada conflito previsto para dentro dos próximos 15 segundos, um alerta deve ser criado imediatamente. Se um conflito for previsto para exatamente 15 segundos depois que o mesmo fora detectado, deve-se esperar uma segunda previsão de conflito para que a primeira seja validada, o que evita a criação de alarmes desnecessários quando uma aeronave cruza momentaneamente a rota de outra. Essas restrições são especificadas no trabalho de \citeonline{Gariel2011}, e foram adotadas neste trabalho. 
+
+\item Um alerta deve informar qual seu tipo, quais aeronaves estão envolvidas no conflito e quanto tempo resta até que o mesmo ocorra.
+
+\item Após sua criação, os alertas devem ser inseridos no banco de dados disponível no servidor do sistema, para que possam ser acessados pelas aplicações e mostrados aos usuários do sistema. 
+
+\item O módulo deve acessar as informações das aeronaves diretamente no banco de dados disponível no servidor do sistema, de forma a obtê-los o mais rapidamente possível.
+
+\item O módulo terá disponível um servidor com 32 Giga Bytes de memória RAM e 24 núcleos de processamento, recursos que podem oscilar sua disponibilidade devido a hospedagem do servidor Web do sistema e outros processos relativos ao sistema operacional.
+
+\end{itemize}
+
+
+\subsection{Desenvolvimento do módulo CAPLAN}
+
+Devido à centralização de dados, todas as informações do sistema são processadas em um único lugar, o que exige uma grande capacidade de memória e processamento do sistema. O módulo de detecção de colisão CAPLAN deve, portanto, otimizar ao máximo seu tempo de execução e uso de memória. Para resolução do problema de escalabilidade, o presente trabalho apresenta algumas estratégias de otimização para aplicação em grande escala do algoritmo de \citeonline{Gariel2011}, as quais foram implementadas no módulo e estão listadas abaixo:
+
+\begin{itemize}
+
+\item \textbf{Raio Mínimo de Verificação}: Um Raio Mínimo de Verificação consiste em uma distância mínima que duas aeronaves devem apresentar entre si para que o algoritmo de detecção possa ser executado em ambas. A região de segurança PAZ, apresentada no trabalho de \citeonline{Gariel2011} funciona como um raio mínimo de verificação para as aeronaves. No exemplo da Figura \ref{raio minimo}, a aeronave \textit{D} está fora do raio de verificação de \textit{A} e, portanto, o algoritmo de detecção de colisão não analisará \textit{A} em relação a \textit{B}. Assim, esta solução busca evitar a execução do algoritmo em aeronaves demasiadamente distantes, poupando processamento, memória e tempo de execução.
+
+\begin{figure}[H] %use h para forçar que a figura fique abaixo do texto
+
+\caption{\label{fig:exemplo-1} Demonstração da solução Raio Mínimo com Memorização}
+
+    \fbox{
+        \includegraphics[scale=0.67]{figuras/raio_minimo} % altere o atributo scale para o tamanho da figura
+    }
+    
+\legend{Fonte: Elaborada pelo autor}
+\label{raio minimo}
+\end{figure}
+
+O próprio algoritmo de detecção de \citeonline{Gariel2011} proporciona o suporte à técnica \textbf{Raio Mínimo de Verificação} com sua região PAZ. Porém, como o algoritmo simula a rota a ser percorrida por cada aeronave nos próximos 15 segundos (intervalo mínimo para o lançamento de alarmes), a região de Raio Mínimo de Verificação será obtida pela região PAZ estendida com a distância que seria percorrida pela aeronave no intervalo de 15 segundos. A não intersecção das regiões de Raio Mínimo de Verificação de duas aeronaves implica que nenhum alarme será lançado agora, e a custosa simulação de rota a ser percorrida pelas aeronaves não será executada. 
+
+\item \textbf{Segunda Estratégia: Multiprocessamento Simétrico}: O multiprocessamento simétrico é uma forma de dividir a execução de um programa entre vários processadores compartilhando a mesma memória. Isso proporciona um aumento linear na eficiência do processamento, proporcional a quantidade de processadores disponíveis. O computador disponível para este experimento tem 24 núcleos de processamento, nos quais os pares de aeronaves podem ser divididos e verificados paralelamente.
+
+O problema de escalabilidade consiste em uma combinação de pares de aeronaves, nos quais o algoritmo de detecção será aplicado. Durante sua execução, o módulo gera uma lista com todos os pares de aeronaves possíveis. Com a técnica de \textbf{Multiprocessamento Simétrico}, a lista de pares é dividida pelo número de processadores disponíveis e a mesma quantidade de \textit{threads} é criada. Cada \textit{thread} executará uma parte da lista independentemente das demais, e os alarmes serão gerados em tempo de execução de forma assíncrona.
+
+
+\item \textbf{Terceira Estratégia: Divisão do Espaço Aéreo em Áreas}: Assim como a estratégia de \textbf{Raio Mínimo de Verificação}, a \textbf{Divisão do Espaço Aéreo em Áreas} considera que aeronaves muito distante não irão colidir num curto intervalo de tempo e o algoritmo pode simplesmente ignorá-las e analisar somente aeronaves com real chance de colisão a curto prazo. Mas o objetivo agora é dividir o espaço aéreo global em áreas e analisar apenas aeronaves em regiões próximas, evitando analisar aeronaves muito distantes e poupando processamento. 
+
+Existem muitas formas de dividir o globo terrestre em áreas. Estas podem ser representadas, por exemplo, como regiões triangulares que formam um sólido geométrico de 4 faces (tetraedro), 8 faces (octaedro), ou até mesmo 20 faces (icosaedro). Porém, tais representações tridimensionais são computacionalmente complexas, o que as distancia do seu objetivo inicial de proverem uma otimização ao tempo de execução do algoritmo. Uma representação mais simples, a qual é implementada neste experimento, é a divisão do globo terrestre em fatias delimitadas por latitudes específicas. Nesse caso, as aeronaves podem ser classificadas nas fatias com uma simples verificação de sua latitude e apenas aeronaves na mesma fatia ou em fatias vizinhas serão verificadas entre si pelo algoritmo, poupando memória, processamento e tempo de execução.
+
+\end{itemize}
+
+O módulo foi implementado na linguagem de programação C++, devido a sua alta velocidade de execução e flexibilidade no tratamento de memória, sob o paradigma orientado a objetos. As principais classes contias em seu código-fonte são:
+
+\begin{itemize}
+
+\item \textbf{Math}: responsável pelos cálculos vetoriais e geoespaciais presentes no algoritmo de previsão de colisão, incluindo multiplicação, adição, subtração, normalização, rotação e translação de vetores, o cálculo da distância entre dois pontos na superfície da terra com a \textbf{fórmula de haversine} \cite{haversine} e um método de interpolação cúbica com a Spline Catmull-Rom \cite{catmullrom} utilizado na sincronização das rotas das aeronaves durante a execução do algoritmo.
+
+\item \textbf{Combinator}: responsável por formar os pares de aeronaves a serem processados pelo algoritmo e dividi-los em grupos de forma a paralelizar sua execução com a estratégia de \textbf{Multiprocessamento Simétrico}.
+
+\item \textbf{CollisionDetector}: responsável por aplicar o algoritmo de detecção de colisão a cada par de aeronaves, aplicando as estratégias de \textbf{Divisão do Espaço Aéreo em Áreas} e \textbf{Raio Mínimo de Verificação} e gerando os alertas para o sistema.
+
+\item \textbf{Repository}: responsável por carregar as informações das aeronaves. É estendida pela classe \textbf{RealRepository}, que obtém as informações diretamente do banco de dados.
+
+\end{itemize}
+
+Devido à necessidade da realização de testes, o módulo utiliza recursos da linguagem e chamadas de sistema para obter informações sobre consumo de memória e tempo de execução, que são armazenadas em arquivos para posterior análise. Entrementes, a classe \textbf{SinteticRepository} substituiu a classe \textbf{RealRepository} na obtenção de informações de aeronaves. Isso se deve a sua capacidade de disponibilizar dados sintéticos sob as especificações exigidas pelos testes. Se um destes pretende analisar o módulo buscando conflitos em 20.000 aeronaves simultaneamente, por exemplo, a classe \textbf{SinteticRepository} irá sinterizar 20.000 aeronaves, gerando randomicamente suas respectivas latitudes, longitudes, altitudes e velocidades, respeitando intervalos encontrados em dados reais.
+
+Ainda para automação dos testes, foi criado um \textit{scipt} na linguagem de programação Shell, que executa os testes e gera uma planilha com os resultados.
+
+
+
+\subsection{Realização da Análise de Desempenho}
+
+Com o módulo em funcionamento e o suporte a testes preparado, as etapas da análise de desempenho tomaram o foco, as quais são listadas a seguir:
+
+\subsubsection{Conhecer o sistema}
+
+O módulo CAPLAN funcionará em uma máquina com 24 núcleos de processamento e 32 Giga Bytes de Memória Ram. Ao seu lado estará funcionando o servidor Web do sistema Radar Livre, que é implementado na linguagem Python em sua versão 2.7.12 e usa o framework DJango\footnote{Mais informações em www.djangoproject.com} em sua versão 1.9. O servidor provê uma API que pode ser usada pelos coletores para envio de novas informações, e por suas aplicações para acesso aos dados registradas pelo sistema. O servidor conta com o Sistema de Gerenciamento de Banco de Dados PostgreSQL\footnote{Mais informações em www.postgresql.org/about}, uma poderosa e robusta ferramenta de código aberto onde estão armazenados todos os dados coletados, e que será acessado pelo módulo.
+
+\subsection{Escolher as Métricas}
+
+As métricas, que constituem restrições a serem respeitadas no experimento, são listadas a seguir:
+
+\begin{itemize}
+
+\item Consumo de memória: a quantidade de memória RAM consumida pelo módulo CAPLAN não deve ultrapassar o limite de 30 Giga Bytes, visto que a quantidade total disponível no servidor é de 32 Giga Bytes e além do módulo, estará em execução o servidor Web do sistema.
+
+\item Tempo de execução: o tempo de execução do algoritmo de detecção de colisão em todas as aeronaves deve ser curto o suficiente para que qualquer alarme seja emitido 15 segundos antes do possível conflito, seja ele PAZ ou CAZ.
+
+
+\end{itemize}
+
+
+
+\subsection{Definir Fatores e Níveis}
+Os fatores que podem afetar o experimento e seus respectivos níveis são apresentados a seguir:
+
+\begin{itemize}
+    
+\item Distribuição em \textit{threads}: a execução do algoritmo será paralelizada em uma quantidade configurável de \textit{threads}. Para este experimento, serão consideradas as quantidades \(n\), \(n-2\) e \(n-4\), onde \(n\) representa o número de núcleos de processamento disponíveis no computador de testes, no caso deste trabalho \(n = 24\). No caso de \(n-2\) e \(n-4\), as quantidades subtraídas são compensações às \textit{threads} utilizadas no restante do módulo de detecção (a \textit{thread main}, a \textit{thread} responsável pela execução da combinação, a \textit{thread} responsável pelo acesso ao banco de dados e a \textit{thread} responsável pelo processamentos dos alarmes gerados). Essa compensação garante que o número de \textit{threads} seja o mesmo que o número de núcleos de processamento. Porém, como algumas partes do módulo exigem mais poder de processamento que outras, não há garantia de que uma mesma quantidade de \textit{threads} e núcleos proporcione um aproveitamento máximo do paralelismo, algo que apenas experimentos podem mostrar.
+
+\item Intervalo de simulação: durante a execução do algoritmo de detecção de colisão, este realiza uma simulação da rota a ser percorrida por cada aeronave em um intervalo configurável de tempo. Este intervalo interfere diretamente no tempo de processamento do algoritmo e a diferença entre os mesmos (intervalo de simulação e tempo de processamento) deve ser de no mínimo 15 segundos, de forma que qualquer alarme seja emitido 15 segundos antes do possível conflito. Os intervalos testados serão de 20, 30, 40, 50 e 60 segundos.
+
+\item Intervalo entre áreas: com a estratégia de divisão em áreas, o globo terrestre é dividido em fatias de intervalo de latitude configurável. Se o intervalo for de 1 grau, por exemplo, as fatias terão altura de um grau de latitude. Para este experimento, serão testados intervalos de 1 a 5 graus.
+
+\end{itemize}
+
+
+\subsection{Escolher a Técnica de Avaliação}
+
+% ...
+
+\subsection{Executar a Avaliação e Obter os Resultados}
+
+O módulo CAPLAN foi executado várias vezes por um \textit{script} no servidor do sistema Radar Livre. Em sua versão de teste o módulo recebe parâmetros de execução que especificam a quantidade de aeronaves a ser sintetizada, quais técnicas de otimização devem ser utilizadas e quantas vezes o teste deve ser repetido. Os valores utilizados para a quantidade de aeronaves foram 100, 500, 1000, 5000, 10000, 15000, 20000, 25000 e 30000. Para cada um destes valores, foram testadas as possibilidades de execução sem otimizações, com a técnica \textbf{Multiprocessamento Simétrico}, com a técnica \textbf{Divisão em Áreas} e com as duas técnicas simultaneamente. A técnica de \textbf{Raio Mínimo de Verificação} participou de todos os experimentos pois já fazia parte do algoritmo de detecção que é especificada no trabalho de \citeonline{Gariel2011}, onde a região de segurança PAZ representa o raio mínimo. Além disso, cada experimento foi repetido 5 vezes, e os valores finais do tempo de execução e consumo de memória de cada experimento são obtidos pela média aritmética dos valores obtidos pelas repetições dos mesmos.
+
+\subsection{Analisar e interpretar os resultados}
+\subsection{Apresentar os Resultados}

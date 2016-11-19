@@ -1,0 +1,31 @@
+\section{OBJETIVOS}
+
+\subsection{Objetivo Geral}
+
+Por executar em uma base de dados centralizada, o algoritmo de detecção de colisão (que analisa a iminência de colisão apenas entre duas aeronaves por vez) deve ser repetido em todos os pares de aeronaves disponíveis no banco de dados do sistema. O desafio da aplicação não reside, por tanto, na simples execução do algoritmo de detecção selecionado, mas sim em sua repetição em milhões de pares de aeronaves. Esse desafio exige uma solução de escalabilidade que garanta a execução completa do algoritmo em um intervalo viável de tempo, curto o suficiente para que um alerta seja gerado a tempo de evitar uma colisão. 
+
+Durante as pesquisas para este trabalho, algumas estratégias de otimização foram encontradas e combinadas numa solução de escalabilidade para o desafio proposto. Dessa forma, o objetivo deste trabalho é avaliar o desempenho das soluções de escalabilidade para aplicação em grande escala do algoritmo de previsão de colisão selecionado.
+
+%%Resta, então, a tarefa que é o principal objetivo deste trabalho: avaliar o desempenho da solução de escalabilidade para aplicação em grande escala do algoritmo de previsão de colisão selecionado.
+
+\subsection{Objetivos específicos}
+
+O objetivo deste trabalho pode ser dividido em três ainda mais específicos:
+
+\begin{alineas}
+    
+    \item Selecionar em trabalhos existentes um algoritmo para detecção de colisão entre aeronaves no espaço aéreo, o qual fará parte do módulo de detecção de colisão CAPLAN.
+    \item Formular uma alternativa para utilização do algoritmo escolhido em grande escala, visto que o sistema irá monitorar uma grande quantidade de aeronaves simultaneamente em sua base de dados centralizada.
+    \item Fazer uma avaliação de desempenho da solução de escalabilidade apresentada, comparando-a com a execução sem qualquer estratégia de otimização e verificando sua viabilidade para compor o módulo CAPLAN. 
+
+\end{alineas}
+
+O primeiro destes objetivos se resume a uma pesquisa dos algoritmos de detecção de colisão propostos atualmente, na busca do mais adequado ao ambiente do sistema Radar Livre. Este sistema opera, como dito antes, com uma grande quantidade de dados combinados, o que exige um algoritmo extremamente rápido. No entanto, enquanto alguns algoritmos para este fim ganham em rapidez, os mesmos acabam perdendo em precisão por desconsiderarem algumas informações importantes, como o formato geodésico da terra. Outros, por considerarem informações como essa, acabam tornando-se complexos e lentos, embora extremamente precisos. 
+
+A precisão do algoritmo é um fator decisivo em sua velocidade de execução, o que a torna um elemento crítico do módulo CAPLAN, que portanto não pode ser desprezado. Alternativamente, podemos dar uma atenção especial ao segundo objetivo específico deste trabalho encontrado uma solução de escalabilidade bastante eficiente que compense a complexidade do algoritmo de detecção. Esta solução deve ainda garantir a execução total do algoritmo em um intervalo de tempo com consumo de memória e nível de processamento viáveis, os quais serão medidos por uma análise de desempenho que caracteriza o terceiro objetivo deste trabalho.
+
+
+
+
+
+

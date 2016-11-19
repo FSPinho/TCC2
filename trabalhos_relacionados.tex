@@ -1,0 +1,8 @@
+\section{TRABALHOS RELACIONADOS}
+
+Em seu trabalho, \citeonline{Carbone2006} apresentam um algoritmo para detecção e tratamento de colisões utilizando-se de geometria tridimensional. O mesmo é apresentado como uma alternativa aos algoritmos existentes até então, que não operavam rápido o suficiente. No método, as aeronaves são tratadas como vetores tridimensionais. Uma das aeronaves, considerada como um referencial, é o centro de uma esfera que define um volume de segurança em torno da mesma. Se uma outra aeronave cruzar essa fronteira, estará na iminência de uma colisão. Por ser simples e direto, o algoritmo pode ser executado rapidamente adequando-se a aplicações de tempo real. O método não considera, no entanto, possíveis variantes na orientação e velocidades das aeronaves, o que o torna pouco preciso.
+
+\citeonline{Gariel2011} apresentam uma solução que considera variantes de orientação e velocidade da aeronave, além de protocolos que determinam o funcionamento dos alertas aos pilotos. Por considerar mais variantes, esse algoritmo é mais complexo e seu processamento é menos eficiente que o de \citeonline{Carbone2006}. A solução de \citeonline{Gariel2011}, no entanto, produz resultados mais precisos e portanto, foi a escolhida para este trabalho.
+
+Os dois algoritmos focam no conflito de duas aeronaves em particular, não abordando o problema de análise de colisão entre vários aviões de forma rápida e escalável. Este trabalho se diferencia por propor e analisar o desempenho de uma solução para aplicação do algoritmo de \citeonline{Gariel2011} com centenas ou até milhares de aeronaves simultaneamente.
+
